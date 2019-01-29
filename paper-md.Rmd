@@ -1,0 +1,344 @@
+---
+title: "Shanghai-NGO-Analysis"
+author: "Eunhou Esther Song"
+date: "1/28/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This memo visualizes data used for Chapter 4 of my dissertation. This data was used to qualitatively categorize organizations according to service type, and was later used to obtain a category-wise list across districts in Shanghai.
+
+#### Analysis Procedure
+
+##### Basic Web Scraping and Word Detection
+
+The analysis procedure included the following:
+
+* Web-scraping the official [Shanghai social organization website](http://stj.sh.gov.cn/) which included information on the name of social organization, location, established date, activities, annual government reports that include supervisory organization, origin of funding at establishment, etc. The data set includes information on registered organizations up until March 11, 2017.
+
+* Reading the activities of the organizations to categorize organizations by activity. Except for categorization by MOCA, there is no proper categorization for those that are not categorized. I read activities of 100 organizations that were *not* categorized, and categorized these organizations accordingly. The categories in the data includes:
+
+  + Six categories made by MOCA are **elderly care, women and children, disabled, re-employment, poverty relief, legal**
+  
+  + ```public service```
+  The former includes organizations that take on administrative roles, party-building, community governance, and social organization management. 
+  
+  + ```public welfare```
+  Organizations that specifically mention public work (*gongyi xiangmu*) or public interest (*gongyi*). These three categorizes were created by finding organizations which mentioned the following word or words in their activities description.
+  
+  + ```migrant```
+  MOCA does not categorize organizations for migrant workers, so these were categorized separately. There was one caveat when conding migrant NGOs. Most of these organizations were non-profit schools registered under Ministry of Education. To leave out schools, I created a separate variable ```sup_org_ed``` which denotes organizations which have MOE as a supervisory organization. The charts below therefore displays NGOs that serve the migrant population leaving out schools for migrant children.
+  
+  + ```propaganda```
+  Organizations take on roles of propagating party-state policy doctrines
+
+* Create ```party affiliation``` category by using information on supervisory organization. Although having a party organization as a supervisory organizations does not imply *direct* affiliation nor being a direct subsidiary of a party organization (this is because, supervisory organization is needed for registration not for other purposes), yet the fact that having a party organization as a supervisory organization implies a connection.
+
+* Parsing annual reports. The annual reports included information on origins of funding and number of memebrs, where responses were categorized as "individual", "self-financed", "government", and "all of above".
+
+#### Words Used for Categorization Based on Qualitative Reading
+
+* The collected data includes description of activities these organizations pursue. Below are examples of these descriptions:
+```{r echo=FALSE}
+dat_n<-read.csv("~eunhousong/Home/AB/soc_wel9_all_cat_190101.csv",header=T)
+dat_n$act[50:51]
+```
+* Below includes words that were used to categorize organizations based on activities:
+```
+# public service organizations
+['社区管里',
+'治安',
+'综合治理',
+'人口管理',
+'外来人口登记管理',
+'外来人口管理',
+'公共管理',
+'卫生管理',
+'环境管理',
+'登记管理',
+'社会组织',
+'民间组织',
+'群众组织',
+'消防',
+'社会管理',
+'社会组织',
+'人民调解',
+'矛盾调处',
+'综合帮扶',
+'综合协管服务',
+'党建',
+'社区事务',
+'公共文化',
+'公共文化服务',
+'体育设施',
+'社区环境',
+'综合协管',
+'社区矛盾调解',
+'社会组织孵化',
+'民生服务',
+'民生类服务',
+'社区民生服务',
+'便民',
+'便民服务',
+'社区服务',
+'社区居民服务',
+'互助',
+'公益类服务',
+'公益性服务',
+'市民综合帮扶',
+'社区事务',
+'综合服务',
+'社会便民服务']
+
+# public welfare organizations
+['公益活动','公益性活动','公益类活动','公益项目']
+
+# organizations assist migrant workers
+['流动','外来','农民工']
+
+# propaganda
+['思想道德',
+'优生优育知识的宣传',
+'人口计划生育',
+'人口与计生',
+'人口计生',
+'政策宣传',
+'精神文明建设',
+'文明',
+'宣传党的政策方针',
+'宣传党的']
+```
+
+```{r dat_n, echo=FALSE, results='hide'}
+library(gridExtra)
+library(grid)
+
+# Check Braod Categories - Social Welfare, Propaganda, Public Welfare, Public Service
+
+table(dat_n$wo) # women and children 30
+table(dat_n$pr) # poverty relief 108
+table(dat_n$eld) # elderly 142
+table(dat_n$disa) # disabled 82
+table(dat_n$leg) # legal 95
+table(dat_n$remp) # remp 164
+
+# Modify Migrant 
+# Subset to those that do not have education bureau as supervisory organization; and those that are not public service related;
+
+length(dat_n$act[which(dat_n$mi == 1 & dat_n$sup_org_ed == 0 & dat_n$pbs == 0)]) # 8
+
+
+sw<- c(30,108,142,82,95,164,8)
+
+sum(sw) # social welfare 629
+table(dat_n$pbs) # public service 526
+table(dat_n$pi_act) # 246 public welfare 
+table(dat_n$prop) # 86 propaganda 
+
+
+numbs = c(629,526,246,86)
+sum(numbs)
+labs = c("Social Welfare","Public Service","Public Welfare","Propaganda")
+broad_cat<-as.data.frame(cbind(numbs,labs))
+
+broad_cat$numbs<-as.numeric(as.character(broad_cat$numbs))
+broad_cat$labs<-factor(broad_cat$labs)
+
+
+numbs2 = c(30,108,142,82,95,164,8)
+sum(numbs2)
+labs2 = c("Women and Children","Poverty Relief","Elderly","Disabled","Legal","Re-employment","Migrant")
+sw_cat<-as.data.frame(cbind(numbs2,labs2))
+sw_cat$numbs2<-as.numeric(as.character(sw_cat$numbs2))
+sw_cat$labs2<-factor(sw_cat$labs2)
+
+
+# Party Affiliation
+
+# All Data Set
+
+party_cat_counts<-as.data.frame(cbind(c(0,1),matrix(table(dat_n$party_cat))))
+party_cat_counts$V1<-as.factor(as.character(party_cat_counts$V1))
+
+# Subset to Social Welfare Organization
+dat_n$sw_dum<-0
+dat_n$sw_dum[which(dat_n$wo == 1 | dat_n$pr == 1 |dat_n$eld == 1 |dat_n$disa == 1 |dat_n$leg == 1 |dat_n$remp == 1 )]<-1
+dat_n$sw_dum[which(dat_n$mi == 1 & dat_n$sup_org_ed == 0 & dat_n$pbs == 0)]<-1
+
+# Social Welfare
+
+# Subset
+dat_sw<-dat_n[which(dat_n$sw_dum == 1),]
+
+party_cat_counts2<-as.data.frame(cbind(c(0,1),matrix(table(dat_sw$party_cat))))
+party_cat_counts2$V1<-as.factor(as.character(party_cat_counts2$V1))
+
+
+# Comparison of Six Categories Across Party-Affiliated and Non-Party Affiliated
+# Among Social Welfare Organizations
+
+dat_part<-dat_sw[which(dat_sw$party_cat == 1),]
+table(dat_part$wo) # women and children 14
+table(dat_part$pr) # poverty relief 4
+table(dat_part$eld) # elderly 0
+table(dat_part$disa) # disabled 58
+table(dat_part$leg) # legal 3
+table(dat_part$remp) # remp 44
+length(dat_part$act[which(dat_part$mi == 1 & dat_part$sup_org_ed == 0 & dat_part$pbs == 0)]) # 2
+
+part<-c(14,4,0,58,3,44,2)
+sum(part)
+labs2 = c("Women and Children","Poverty Relief","Elderly","Disabled","Legal","Re-employment","Migrant")
+first<-as.data.frame(cbind(part,labs2))
+first$part<-as.numeric(as.character(first$part))
+first$labs2<-factor(first$labs2)
+
+dat_partn<-dat_sw[which(dat_sw$party_cat == 0),]
+table(dat_partn$wo) # women and children 15
+table(dat_partn$pr) # poverty relief 104
+table(dat_partn$eld) # elderly 142
+table(dat_partn$disa) # disabled 24
+table(dat_partn$leg) # legal 92
+table(dat_partn$remp) # remp 120
+
+length(dat_partn$act[which(dat_partn$mi == 1 & dat_partn$sup_org_ed == 0 & dat_partn$pbs == 0)]) # 6
+
+
+npart<-c(15,104,142,24,92,120,6)
+sum(npart)
+second<-as.data.frame(cbind(npart,labs2))
+second$npart<-as.numeric(as.character(second$npart))
+second$labs2<-factor(second$labs2)
+
+# Year
+dat_ny<-dat_n[which(dat_n$estab_year < 2017 & dat_n$estab_year > 1999 & dat_n$sw_dum == 1),]
+year<-c(2000:2016)
+yt<-as.data.frame(cbind(year,matrix(table(dat_ny$estab_year))))
+yt$year<-as.factor(as.character(yt$year))
+
+# Shequ
+
+counts<-c(185,357)
+labs3 = c("Community Level","Others")
+three<-as.data.frame(cbind(counts,labs3))
+three$counts<-as.numeric(as.character(three$counts))
+three$labs3<-factor(three$labs3)
+```
+```{r echo = FALSE, results='hide', message=FALSE}
+library(ggplot2)
+library(gridExtra)
+library(grid)
+library(cowplot)
+
+# Broad Categories
+p1<-ggplot(broad_cat, aes(reorder(labs,-(numbs),sum),numbs))+geom_bar(stat = "identity", aes(fill = as.factor(numbs)), show.legend = FALSE)+ggtitle("NGOs in Shanghai by Category, N=1487")+labs(x=NULL, y=NULL)+theme_minimal()+ theme(axis.title.x = element_text(size = 7),axis.title.y = element_text(size = 7),axis.text.y = element_text(size = 6),axis.text.x = element_text(size = 6),plot.title = element_text(size = 7, hjust = 0.5))+scale_fill_brewer(palette="Blues")
+
+# Welfare Categories
+p2 <-ggplot(sw_cat, aes(reorder(labs2,-(numbs2),sum),numbs2))+geom_bar(stat = "identity", aes(fill = as.factor(numbs2)), show.legend = FALSE)+labs(x=NULL, y=NULL)+ggtitle("Social Welfare Service NGOs in Shanghai by Category, N=542")+theme_minimal()+ theme(axis.title.x = element_text(size = 7),axis.title.y = element_text(size = 7),axis.text.y = element_text(size = 6),axis.text.x = element_text(angle = 90, size = 6),plot.title = element_text(size = 7, hjust = 0.5))+scale_fill_brewer(palette="Blues")
+
+# Party Affiliation
+p3<-ggplot(party_cat_counts, aes(reorder(V1,-(V2),sum),V2))+geom_bar(stat = "identity", aes(fill = as.factor(V2)), show.legend = FALSE)+ labs(x = "0 = Not Affiliated, 1 = Affiliated")+ggtitle("Party Affiliation, N=4325")+labs(x=NULL, y=NULL)+scale_x_discrete(labels= c("No Party Affiliation","Party Affiliation"))+theme_minimal()+ theme(axis.title.x = element_text(size = 7),axis.title.y = element_text(size = 7),axis.text.y = element_text(size = 6),axis.text.x = element_text(size = 6),plot.title = element_text(size = 7, hjust = 0.5))+scale_fill_brewer(palette="Blues")
+
+p4<-ggplot(party_cat_counts2, aes(reorder(V1,-(V2),sum),V2))+geom_bar(stat = "identity", aes(fill = as.factor(V2)), show.legend = FALSE)+ labs(x = "0 = Not Affiliated, 1 = Affiliated")+ggtitle("Party Affiliation of Social Welfare Service Organizations, N=542")+labs(x=NULL, y=NULL)+scale_x_discrete(labels= c("No Party Affiliation","Party Affiliation"))+theme_minimal()+ theme(axis.title.x = element_text(size = 7),axis.title.y = element_text(size = 7),axis.text.y = element_text(size = 6),axis.text.x = element_text(size = 6),plot.title = element_text(size = 7, hjust = 0.5))+scale_fill_brewer(palette="Blues")
+
+# Party Affiliation and Categorizations, Social Welfare 
+p5<-ggplot(first, aes(reorder(labs2,-(part),sum),part))+geom_bar(stat = "identity", aes(fill = as.factor(part)), show.legend = FALSE)+ theme(axis.text.x = element_text(angle = 90))+ggtitle("Party Affiliated Social Welfare Organizations by Category, N=125")+labs(x=NULL, y=NULL)+theme_minimal()+ theme(axis.title.x = element_text(size = 7),axis.title.y = element_text(size = 7),axis.text.y = element_text(size = 6),axis.text.x = element_text(angle = 90, size = 6),plot.title = element_text(size = 7, hjust = 0.5))+scale_fill_brewer(palette="Blues")
+
+# Welfare Categories
+p6 <-ggplot(second, aes(reorder(labs2,-(npart),sum),npart))+geom_bar(stat = "identity", aes(fill = as.factor(npart)), show.legend = FALSE)+ theme(axis.text.x = element_text(angle = 90))+ggtitle("Non-Party Affiliated Social Welfare Organizations by Category, N=503")+labs(x=NULL, y=NULL)+theme_minimal()+ theme(axis.title.x = element_text(size = 7),axis.title.y = element_text(size = 7),axis.text.y = element_text(size = 6),axis.text.x = element_text(angle = 90, size = 6),plot.title = element_text(size = 7, hjust = 0.5))+scale_fill_brewer(palette="Blues")
+
+# Origins of Funding
+
+fin_labs<-c("Individual","All Above", "Self-Financed", "Government")
+fin<-as.data.frame(cbind(fin_labs,matrix(table(dat_n$funding_start))))
+fin$V2<-as.numeric(as.character(fin$V2))
+
+p7 <-ggplot(fin, aes(reorder(fin_labs,-(V2),sum),V2))+geom_bar(stat = "identity", aes(fill = as.factor(V2)), show.legend = FALSE)+ theme(axis.text.x = element_text(angle = 90))+ggtitle("Origin of Funding, N=2256")+labs(x=NULL, y=NULL)+theme_minimal()+ theme(axis.title.x = element_text(size = 7),axis.title.y = element_text(size = 7),axis.text.y = element_text(size = 6),axis.text.x = element_text(size = 6),plot.title = element_text(size = 7, hjust = 0.5))+scale_fill_brewer(palette="Blues")
+                                
+# Size
+dt<-dat_n[which(is.na(dat_n$members_no) == FALSE & dat_n$members_no > 0 & dat_n$members_no < 250),] # 489
+
+p8<-qplot(dt$members_no, geom="histogram", binwidth = 10, fill=I("blue"),col=I("red"),alpha = I(0.2))+ggtitle("Number of Members, N=489")+labs(x=NULL, y=NULL)+theme_minimal()+ theme(axis.title.x = element_text(size = 7),axis.title.y = element_text(size = 7),axis.text.y = element_text(size = 6),axis.text.x = element_text(size = 6),plot.title = element_text(size = 7, hjust = 0.5))+scale_fill_brewer(palette="Blues")
+
+blank<-ggplot()+geom_blank(aes(1,1))+
+  theme(
+    plot.background = element_blank(), 
+   panel.grid.major = element_blank(),
+   panel.grid.minor = element_blank(), 
+   panel.border = element_blank(),
+   panel.background = element_blank(),
+   axis.title.x = element_blank(),
+   axis.title.y = element_blank(),
+   axis.text.x = element_blank(), 
+   axis.text.y = element_blank(),
+   axis.ticks = element_blank(),
+   axis.line = element_blank()
+     )
+
+# Shequ -- level of activity
+# horizontal barplot
+
+p10<-ggplot(three, aes(reorder(labs3,-(counts),sum),counts))+geom_bar(stat = "identity", aes(fill = as.factor(counts)), show.legend = FALSE)+coord_cartesian(ylim=c(0,400))+coord_flip()+ theme(axis.text.x = element_text(angle = 90))+ggtitle("Social Welfare Service NGOs by Activity Level, N=542")+labs(x=NULL, y=NULL)+theme_minimal()+ theme(axis.title.x = element_text(size = 7),axis.title.y = element_text(size = 7),axis.text.y = element_text(size = 6),axis.text.x = element_text(angle = 90, size = 6),plot.title = element_text(size = 7, hjust = 0.5))+scale_fill_brewer(palette="Blues")
+
+
+
+# Put blank graph
+
+blank2<-ggplot()+geom_blank(aes(1,1))+
+  theme(
+    plot.background = element_blank(), 
+   panel.grid.major = element_blank(),
+   panel.grid.minor = element_blank(), 
+   panel.border = element_blank(),
+   panel.background = element_blank(),
+   axis.title.x = element_blank(),
+   axis.title.y = element_blank(),
+   axis.text.x = element_blank(), 
+   axis.text.y = element_blank(),
+   axis.ticks = element_blank(),
+   axis.line = element_blank()
+     )
+# Year -- Social Welfare Organizations
+p9 <-ggplot(yt, aes(year, V2))+geom_bar(stat = "identity", aes(fill = as.factor(V2)), show.legend = FALSE)+ theme(axis.text.x = element_text(angle = 90))+ggtitle("Social Welfare Organizations Established by Year, N=534")+labs(x=NULL, y=NULL)+theme_minimal()+ theme(axis.title.x = element_text(size = 7),axis.title.y = element_text(size = 7),axis.text.y = element_text(size = 6),axis.text.x = element_text(size = 6),plot.title = element_text(size = 7, hjust = 0.5))
+```
+#### Charts
+```{r p1,blank,p3,p4,p7,p8,echo=FALSE, dpi=300, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(gridExtra)
+library(grid)
+library(cowplot)
+
+plot_grid(p1,blank, p3,p4,p7,p8,ncol=2)
+```
+
+```{r blank, p2,p5,p6, p10, blank2, echo=FALSE, dpi=300, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(gridExtra)
+library(grid)
+library(cowplot)
+
+plot_grid(p2, blank, p5,p6,ncol=2)
+```
+```{r p10, echo=FALSE, dpi=300, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(gridExtra)
+library(grid)
+library(cowplot)
+
+plot_grid(p10, blank, ncol=2)
+```
+
+```{r p9, echo=FALSE, dpi=300, warning=FALSE, message=FALSE, fig.width = 7, fig.height = 4}
+library(ggplot2)
+library(gridExtra)
+library(grid)
+library(cowplot)
+
+plot_grid(p9)
+```
+
+
+
