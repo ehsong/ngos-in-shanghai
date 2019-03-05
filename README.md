@@ -149,9 +149,9 @@ The analysis procedure included the following:
 
 #### Charts
 
-![](paper-md_files/figure-gfm/p1,blank,p3,p4,p7,p8-1.png)<!-- -->
+![](README_files/figure-gfm/p1,blank,p3,p4,p7,p8-1.png)<!-- -->
 
-![](paper-md_files/figure-gfm/blank,%20p2,p5,p6,%20p10,%20blank2-1.png)<!-- -->
-![](paper-md_files/figure-gfm/p10-1.png)<!-- -->
+![](README_files/figure-gfm/blank,%20p2,p5,p6,%20p10,%20blank2-1.png)<!-- -->
+![](README_files/figure-gfm/p10-1.png)<!-- -->
 
-![](paper-md_files/figure-gfm/p9-1.png)<!-- -->
+![](README_files/figure-gfm/p9-1.png)<!-- -->
