@@ -8,6 +8,9 @@ data was used to qualitatively categorize organizations according to
 service type, and was later used to obtain a category-wise list across
 districts in Shanghai.
 
+The python scripts used to extract text from activity descriptions and government reports
+are in this repo. For an example of a government report please see [here](https://github.com/ehsong/ngos-in-shanghai/blob/master/gov_report_full_example.pdf). The python code for parsing the govenrment report texts is in this repo [here][https://github.com/ehsong/ngos-in-shanghai/blob/master/gov_report_fields.py]. The python code for parsing NGO activities is [here][https://github.com/ehsong/ngos-in-shanghai/blob/master/acts_classify.py].
+
 #### Analysis Procedure
 
 ##### Basic Web Scraping and Word Detection
